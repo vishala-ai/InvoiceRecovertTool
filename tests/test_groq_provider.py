@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import copy
-from http.client import HTTPSConnection
+from http.client import HTTPException, HTTPSConnection
 import importlib.util
 import io
 import json
 import os
 from pathlib import Path
+import socket
+import ssl
 import tempfile
 import threading
 import time
@@ -90,28 +92,87 @@ class GroqTransportTests(unittest.TestCase):
                 opened.assert_not_called()
 
     def test_http_errors_redirects_and_provider_bodies_never_leak_key(self):
-        for status in (301, 302, 307, 400, 401, 403, 429, 500):
-            response = FakeResponse(json.dumps({'error': KEY}).encode(), status=status,
-                                    headers={'Location': 'https://attacker.invalid/' + KEY})
+        for status in (301, 302, 307, 308, 400, 401, 403, 404, 413, 418, 422, 429,
+                       500, 502, 503, 599, 600):
+            response = FakeResponse(json.dumps({'error': KEY, 'message': 'private-provider-body'}).encode(),
+                status=status, headers={'Location': 'https://attacker.invalid/' + KEY,
+                                        'X-Request-Id': 'private-provider-header'})
+            response.reason = 'private-provider-reason ' + KEY
+            response.getheader = Mock(side_effect=AssertionError('Do not inspect error headers'))
+            response.read1 = Mock(side_effect=AssertionError('Do not read error bodies'))
             connection = self.connection(response)
             with self.subTest(status=status), patch.object(
                     groq, '_DeadlineConnection', return_value=connection):
                 with self.assertRaises(RuntimeError) as caught:
                     groq._json_request({'synthetic': True}, KEY)
-                self.assertNotIn(KEY, ''.join(traceback.format_exception(caught.exception)))
-                self.assertNotIn('attacker', str(caught.exception))
+                diagnostic = ''.join(traceback.format_exception(caught.exception))
+                for private in (KEY, 'attacker', 'private-provider-body',
+                                'private-provider-header', 'private-provider-reason'):
+                    self.assertNotIn(private, diagnostic)
+                self.assertIsNone(caught.exception.__cause__)
                 self.assertEqual(connection.request.call_count, 1)
                 self.assertEqual(response.body.tell(), 0)
+                response.read1.assert_not_called()
+                response.getheader.assert_not_called()
+
+    def test_http_status_diagnostics_distinguish_configuration_request_and_service_failures(self):
+        expected = {
+            400: 'Groq rejected the request (HTTP 400). Check the configured model and request format; '
+                 'draft withheld (no provider fallback).',
+            401: 'Groq authentication failed (HTTP 401). Check the privately configured API key; '
+                 'draft withheld (no provider fallback).',
+            403: 'Groq access denied (HTTP 403). Check project and model permissions; '
+                 'draft withheld (no provider fallback).',
+            404: 'Groq model or endpoint unavailable (HTTP 404). Check the configured model; '
+                 'draft withheld (no provider fallback).',
+            413: 'Groq rejected the request size (HTTP 413). Check the model request-size limits; '
+                 'draft withheld (no provider fallback).',
+            422: 'Groq could not process the request (HTTP 422). Check model and request compatibility; '
+                 'draft withheld (no provider fallback).',
+            429: 'Groq rate limit reached (HTTP 429); draft withheld; retry explicitly later '
+                 '(no provider fallback).',
+        }
+        for status in (500, 502, 503, 599):
+            expected[status] = (f'Groq service failed (HTTP {status}). Retry explicitly later; '
+                                'draft withheld (no provider fallback).')
+        for status, message in expected.items():
+            with self.subTest(status=status), patch.object(groq, '_DeadlineConnection',
+                    return_value=self.connection(FakeResponse(status=status))):
+                with self.assertRaises(RuntimeError) as caught:
+                    groq._json_request({'synthetic': True}, KEY)
+                self.assertEqual(str(caught.exception), message)
+
+    def test_redirects_and_unclassified_statuses_keep_generic_diagnostics(self):
+        for status in (201, 301, 302, 307, 308, 418, 499, 600):
+            connection = self.connection(FakeResponse(status=status))
+            with self.subTest(status=status), patch.object(
+                    groq, '_DeadlineConnection', return_value=connection) as factory:
+                with self.assertRaises(RuntimeError) as caught:
+                    groq._json_request({'synthetic': True}, KEY)
+                self.assertEqual(str(caught.exception),
+                    'Groq request failed; draft withheld (no provider fallback)')
+                factory.assert_called_once()
+                connection.request.assert_called_once()
 
     def test_network_exception_is_sanitized_without_exception_chain_or_fallback(self):
-        connection = self.connection()
-        connection.request.side_effect = OSError('secret header ' + KEY)
-        with patch.object(groq, '_DeadlineConnection', return_value=connection):
-            with self.assertRaises(RuntimeError) as caught:
-                groq._json_request({'synthetic': True}, KEY)
-        self.assertNotIn(KEY, ''.join(traceback.format_exception(caught.exception)))
-        self.assertIsNone(caught.exception.__cause__)
-        self.assertEqual(connection.request.call_count, 1)
+        for exception in (OSError, ConnectionError, socket.gaierror,
+                          ssl.SSLCertVerificationError, HTTPException, TimeoutError, RuntimeError):
+            connection = self.connection()
+            connection.request.side_effect = exception('secret header ' + KEY)
+            with self.subTest(exception=exception.__name__), patch.object(
+                    groq, '_DeadlineConnection', return_value=connection):
+                with self.assertRaises(RuntimeError) as caught:
+                    groq._json_request({'synthetic': True}, KEY)
+            self.assertNotIn(KEY, ''.join(traceback.format_exception(caught.exception)))
+            self.assertIsNone(caught.exception.__cause__)
+            self.assertEqual(connection.request.call_count, 1)
+            expected = ('Groq request timed out; draft withheld (no provider fallback)'
+                        if exception is TimeoutError else
+                        'Groq request failed; draft withheld (no provider fallback)'
+                        if exception is RuntimeError else
+                        'Groq connection failed. Check server network and TLS access; '
+                        'draft withheld (no provider fallback).')
+            self.assertEqual(str(caught.exception), expected)
 
     def test_timeout_covers_total_wait_and_aborts_blocked_connection(self):
         started, release, finished = threading.Event(), threading.Event(), threading.Event()

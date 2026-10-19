@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from recovery.engine import audit
 from recovery.storage import connect, load_snapshot
@@ -297,6 +297,39 @@ _prepare(st, db, checkpoints, case, 'DEMO')
         state = list_review_workflows(self.db, self.checkpoints)[0]['state']
         self.assertFalse(state['use_llm'])
         self.assertEqual(state['brief']['mode'], 'offline_template')
+        self.assert_finances_and_events()
+
+    def test_cloud_displays_safe_authentication_error_without_draft_or_fallback(self):
+        from recovery.workflow import list_review_workflows
+
+        connection = Mock()
+        connection.sock = None
+        response = connection.getresponse.return_value
+        response.status = 401
+        response.read1.side_effect = AssertionError('Do not read a rejected provider response')
+        response.getheader.side_effect = AssertionError('Do not read rejected provider headers')
+        with patch('recovery.groq_provider._DeadlineConnection', return_value=connection), \
+             patch('recovery.ollama_provider._json_request') as local_network, \
+             patch('recovery.ai._model') as openai:
+            app = self.component(cloud=True)
+            self.widget(app, 'checkbox', 'AI explanation').check().run()
+            next(item for item in app.checkbox if item.label.startswith('Allow sending')).check().run()
+            self.widget(app, 'button', 'Prepare review workflow').click().run()
+            self.assertFalse(list(app.exception))
+            errors = [item.value for item in app.error]
+            self.assertEqual(len(errors), 1)
+            self.assertIn('Groq authentication failed (HTTP 401)', errors[0])
+            self.assertNotIn(SECRET, errors[0])
+            connection.request.assert_called_once()
+            response.read1.assert_not_called()
+            response.getheader.assert_not_called()
+            local_network.assert_not_called()
+            openai.assert_not_called()
+        workflow = list_review_workflows(self.db, self.checkpoints)[0]
+        self.assertEqual(workflow['next'], ['draft'])
+        self.assertFalse(workflow['state'].get('brief'))
+        self.assertFalse(workflow['state'].get('outcome'))
+        self.assertNotIn(SECRET, json.dumps(workflow['state']))
         self.assert_finances_and_events()
 
     def test_local_controls_keep_existing_providers_and_add_hosted_llama_with_fresh_consent(self):

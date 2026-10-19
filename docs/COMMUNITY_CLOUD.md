@@ -81,6 +81,25 @@ All signed-in accounts share the synthetic DEMO workspace. Owner/accountant role
 
 See [Streamlit Secrets management](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management). The Cloud path does not load local `.env` files, publish credentials in URLs, or persist API keys in model checkpoints.
 
+### Troubleshoot a hosted explanation failure
+
+The original pilot selects `llama-3.3-70b-versatile`. Groq's [deprecation notice](https://console.groq.com/docs/deprecations) says this model stopped serving free and developer accounts on August 16, 2026; committed-spend enterprise accounts are exempt. This can explain a failed request, but a generic error alone does not establish the account's tier or the actual cause. Check the project's model availability before retrying. Groq currently lists `openai/gpt-oss-120b` as a [supported model](https://console.groq.com/docs/models) and recommends it as a replacement. Changing `[groq].model` in private Streamlit Secrets is an explicit operator choice; the application never switches models automatically.
+
+Transport errors display safe categories and allowlisted HTTP statuses rather than provider bodies, headers, keys, prompts or exception details. See Groq's [error-code reference](https://console.groq.com/docs/errors).
+
+| Error | Next check |
+| --- | --- |
+| HTTP 401 | Owner checks the configured Groq credential privately. |
+| HTTP 403 | Check project and organization model permissions. |
+| HTTP 400 / 404 | Check model availability and request compatibility; the status alone does not prove deprecation. |
+| HTTP 413 | The provider rejected the complete request size. No evidence is trimmed automatically. |
+| HTTP 422 | The provider could not process the request; no draft is accepted. |
+| HTTP 429 | Check usage limits; retry explicitly later. |
+| HTTP 5xx | Provider service failure; retry explicitly later. |
+| Connection failure / timeout | Check service connectivity, then retry explicitly. |
+
+After changing the model, reassess the invoice and prepare a fresh review with fresh case/evidence consent. An unfinished checkpoint remains pinned to its original model and cannot be silently resumed under the replacement. Existing decisions stay in history. A failed explanation provides no approval-ready draft, never records an approval and never changes approved terms or calculated amounts. Starting a new assessment can make a previous approval historical; an unsuccessful generation can leave a retryable preparation checkpoint. The standard offline review remains a separate explicit option when preparing a fresh review, not a fallback from a failed AI call.
+
 ## 5. Deploy and verify the actual service
 
 1. In Streamlit Community Cloud, select the intended GitHub account/repository and branch, entrypoint **`cloud/streamlit_app.py`**, and **Python 3.12**. Review any repository-access authorization before granting it.

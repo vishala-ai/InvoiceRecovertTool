@@ -7,7 +7,7 @@ and exact facts independently in ai.py before a draft can be displayed.
 """
 from __future__ import annotations
 
-from http.client import HTTPSConnection
+from http.client import HTTPException, HTTPSConnection
 import json
 import os
 from queue import Empty, Queue
@@ -30,6 +30,22 @@ DEFAULT_MODEL = 'llama-3.3-70b-versatile'
 TIMEOUT_SECONDS = 20
 _HOST = 'api.groq.com'
 _PATH = '/openai/v1/chat/completions'
+_HTTP_ERROR_MESSAGES = {
+    400: 'Groq rejected the request (HTTP 400). Check the configured model and request format; '
+         'draft withheld (no provider fallback).',
+    401: 'Groq authentication failed (HTTP 401). Check the privately configured API key; '
+         'draft withheld (no provider fallback).',
+    403: 'Groq access denied (HTTP 403). Check project and model permissions; '
+         'draft withheld (no provider fallback).',
+    404: 'Groq model or endpoint unavailable (HTTP 404). Check the configured model; '
+         'draft withheld (no provider fallback).',
+    413: 'Groq rejected the request size (HTTP 413). Check the model request-size limits; '
+         'draft withheld (no provider fallback).',
+    422: 'Groq could not process the request (HTTP 422). Check model and request compatibility; '
+         'draft withheld (no provider fallback).',
+    429: 'Groq rate limit reached (HTTP 429); draft withheld; retry explicitly later '
+         '(no provider fallback).',
+}
 
 
 def selected_model(model=None) -> str:
@@ -128,8 +144,9 @@ def _json_request(payload: dict, api_key: str) -> dict:
             })
             connection.check_deadline()
             response = connection.getresponse()
-            if response.status == 429:
-                result = ('rate_limited', None)
+            if type(response.status) is int and (response.status in _HTTP_ERROR_MESSAGES
+                                                or 500 <= response.status < 600):
+                result = ('http_error', response.status)
             elif response.status != 200:
                 # 3xx is rejected here; no redirect or alternate origin is followed.
                 result = ('failed', None)
@@ -156,6 +173,8 @@ def _json_request(payload: dict, api_key: str) -> dict:
                             break
         except (TimeoutError, socket.timeout):
             result = ('timeout', None)
+        except (OSError, HTTPException):
+            result = ('connection', None)
         except Exception:
             # Provider bodies, network exception messages and credentials must
             # never reach user-facing checkpoint errors or exception chains.
@@ -171,9 +190,15 @@ def _json_request(payload: dict, api_key: str) -> dict:
         _abort(connection, cancelled)
         raise RuntimeError('Groq request timed out; draft withheld (no provider fallback)') from None
     if category != 'ok':
+        if category == 'http_error':
+            message = _HTTP_ERROR_MESSAGES.get(raw,
+                f'Groq service failed (HTTP {raw}). Retry explicitly later; '
+                'draft withheld (no provider fallback).')
+            raise RuntimeError(message) from None
         messages = {
             'timeout': 'Groq request timed out; draft withheld (no provider fallback)',
-            'rate_limited': 'Groq rate limit reached; draft withheld; retry explicitly later',
+            'connection': 'Groq connection failed. Check server network and TLS access; '
+                          'draft withheld (no provider fallback).',
             'oversized': 'Groq response exceeds the byte limit; draft withheld',
             'invalid': 'Groq returned an invalid response; draft withheld',
         }
