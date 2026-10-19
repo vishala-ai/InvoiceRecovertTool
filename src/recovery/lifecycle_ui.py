@@ -712,9 +712,14 @@ def render_requests(st, db_path, *, tenant='DEMO'):
             reviewer, note = _reviewer(st, prefix + ':attachment:' + request['request_id'])
             attach = st.form_submit_button('Attach supporting document')
         if attach:
-            _action(st, db_path, 'Evidence attached; a reviewed resolution is still required.', lambda: lifecycle.attach_evidence(
-                db_path, tenant, request['request_id'], version, reviewer, note,
-                _key('attach', request['request_id'], version, reviewer, note)))
+            if not version:
+                st.error('Choose a supporting contract document before attaching evidence.')
+            elif version not in {source['version_id'] for source in sources}:
+                st.error('That document is no longer available for this request. Select it again.')
+            else:
+                _action(st, db_path, 'Evidence attached; a reviewed resolution is still required.', lambda: lifecycle.attach_evidence(
+                    db_path, tenant, request['request_id'], version, reviewer, note,
+                    _key('attach', request['request_id'], version, reviewer, note)))
     elif action == 'Review and resolve':
         attached_versions = {event['version_id'] for event in request.get('attachments', [])}
         attached_sources = [source for source in sources if source['version_id'] in attached_versions]

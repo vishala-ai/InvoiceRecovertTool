@@ -525,9 +525,9 @@
     },
     {
       "path": "src/recovery/lifecycle_ui.py",
-      "sha256": "3233e325ccb85ed7970995816069fa599b7efac4b957ba581029e10529eea33f",
-      "source_sha256": "3233e325ccb85ed7970995816069fa599b7efac4b957ba581029e10529eea33f",
-      "bytes": 50098,
+      "sha256": "025354ad8a9a515a51d51a1201c1e8a7f58d40dca77674599804d6b389f34ab1",
+      "source_sha256": "025354ad8a9a515a51d51a1201c1e8a7f58d40dca77674599804d6b389f34ab1",
+      "bytes": 50427,
       "transformed": false
     },
     {
@@ -938,9 +938,9 @@
     },
     {
       "path": "tests/test_lifecycle_ui.py",
-      "sha256": "d952b899c3f1df058da8727b473860ff35b5a7cba635cbc6db555874fcedfbd7",
-      "source_sha256": "d952b899c3f1df058da8727b473860ff35b5a7cba635cbc6db555874fcedfbd7",
-      "bytes": 28242,
+      "sha256": "2f8899b0316c5507961f84e3a873d4c899fc064bb1317e3e791e58ac7d07b008",
+      "source_sha256": "2f8899b0316c5507961f84e3a873d4c899fc064bb1317e3e791e58ac7d07b008",
+      "bytes": 29966,
       "transformed": false
     },
     {

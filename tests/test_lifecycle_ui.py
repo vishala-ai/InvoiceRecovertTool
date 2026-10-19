@@ -290,6 +290,33 @@ class LifecycleUITests(unittest.TestCase):
         self.assertEqual(set(picker.options), {'Select a document', 'DOC-A1', 'DOC-A2', 'DOC-ADRAFT'})
         self.extraction.assert_not_called()
 
+    def test_attachment_requires_document_selection_and_allows_retry_without_writes(self):
+        from test_semantic_ui import database_contents
+
+        request = self.request('L004')
+        self.choose_request('L004')
+        self.widget('text_input', 'Reviewer label (demo only)').set_value('Synthetic reviewer')
+        self.widget('text_area', 'Review rationale').set_value('Check the signed contract amendment.')
+        before = database_contents(self.db)
+        with patch('recovery.lifecycle.attach_evidence', wraps=self.lifecycle.attach_evidence) as attach:
+            self.widget('button', 'Attach supporting document').click().run()
+            self.assertFalse(self.app.exception)
+            self.assertEqual([item.value for item in self.app.error],
+                ['Choose a supporting contract document before attaching evidence.'])
+            attach.assert_not_called()
+            self.assertEqual(database_contents(self.db), before)
+            source = next(source for source in self.lifecycle.list_sources(self.db, 'DEMO')
+                          if source['doc_id'] == 'DOC-A2')
+            self.widget('selectbox', 'Supporting contract document').select(source['version_id'])
+            self.widget('button', 'Attach supporting document').click().run()
+            self.assert_clean()
+            attach.assert_called_once()
+        saved = next(item for item in self.lifecycle.list_requests(self.db, 'DEMO')
+                     if item['request_id'] == request['request_id'])
+        self.assertEqual(saved['status'], 'EVIDENCE_ATTACHED')
+        self.assertEqual([event['version_id'] for event in saved['attachments']], [source['version_id']])
+        self.extraction.assert_not_called()
+
     def test_invoice_navigation_prefills_request_scope_and_selected_case(self):
         self.request('L004')
         os.environ['LIFECYCLE_UI_TEST_PAGE'] = 'Evidence requests'
