@@ -71,6 +71,10 @@ render_forecast_assumption(st, db, cp, forecast, scope='all_approved',
         before = (database_contents(self.db), database_contents(self.cp))
         self.overview()
         self.assertEqual(self.metric(), 'Not estimated')
+        metrics = {item.label: item.value for item in self.app.metric}
+        self.assertEqual(metrics['Total approved records'], '1')
+        self.assertEqual(metrics['Current approved for draft'], '1')
+        self.assertTrue(any(item.value == '1 current / 0 historical' for item in self.app.caption))
         self.assertFalse(self.app.main.text_input)
         self.assertFalse(self.app.text_area)
         self.assertFalse(self.app.expander)
@@ -148,7 +152,9 @@ render_forecast_assumption(st, db, cp, forecast, scope='all_approved',
                          {'Total approved value': 'USD 2,167.18',
                           LABEL: 'Not estimated', 'Realized recovery': 'USD 0.00'})
         self.assertEqual((metrics['Suppliers'], metrics['Contracts']), ('5', '6'))
-        self.assertEqual(metrics['Approved for draft'], '1')
+        self.assertEqual(metrics['Total approved records'], '128')
+        self.assertEqual(metrics['Current approved for draft'], '1')
+        self.assertTrue(any(item.value == '1 current / 127 historical' for item in self.app.caption))
         self.assertFalse(self.app.dataframe)
         self.assertEqual(sum(button.label == 'View cases' for button in self.app.button), 6)
         self.assertFalse(self.app.expander)

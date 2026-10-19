@@ -245,7 +245,17 @@ def render_overview(st, db_path, *, tenant='DEMO'):
         st.subheader('PORTFOLIO COVERAGE')
         st.caption('See the supplier and contract coverage behind the portfolio totals, across current '
                    'records and locked migrated history.')
-        suppliers, contracts = st.columns(2)
+        approved_records, suppliers, contracts = st.columns(3)
+        approved_cases = forecast['basis']['cases']
+        current_approved = sum(case['basis_kind'] == 'CURRENT_APPROVED_DRAFT'
+                               for case in approved_cases)
+        historical_approved = sum(case['basis_kind'] == 'MIGRATED_APPROVED'
+                                  for case in approved_cases)
+        approved_records.metric('Total approved records', f"{forecast['basis']['case_count']:,}",
+            help='Eligible USD approved records across all years supporting the Grand Totals: '
+                 'current approved drafts plus locked migrated approvals, including completed '
+                 'historical records. Historical records remain read-only.')
+        approved_records.caption(f'{current_approved:,} current / {historical_approved:,} historical')
         suppliers.metric('Suppliers', len({row['supplier_id'] for row in portfolio}),
             help='Distinct supplier IDs represented by current invoice lines or locked historical '
                  'contracts in the selected demo scope. A supplier is counted once across all years.')
@@ -278,7 +288,8 @@ def render_overview(st, db_path, *, tenant='DEMO'):
         for start in (0, 4):
             for column, key in zip(st.columns(4), keys[start:start + 4], strict=False):
                 with column.container(key='overview-workload-' + key):
-                    st.metric(BUCKET_LABELS[key], summary['counts'].get(key, 0),
+                    label = 'Current approved for draft' if key == 'approved' else BUCKET_LABELS[key]
+                    st.metric(label, summary['counts'].get(key, 0),
                               help=workload_help[key])
                     if key != 'approval':
                         st.button('View cases', key=f'lifecycle:overview:card:{key}',

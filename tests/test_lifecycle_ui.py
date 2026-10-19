@@ -402,7 +402,10 @@ class LifecycleUITests(unittest.TestCase):
         })
         self.assertEqual((metrics['Suppliers'], metrics['Contracts']), ('3', '4'))
         self.assertEqual(metrics['Prepare explanation'], '4')
-        self.assertEqual(len(self.app.metric), 12)
+        self.assertEqual(len(self.app.metric), 13)
+        self.assertEqual(metrics['Total approved records'], '0')
+        self.assertEqual(metrics['Current approved for draft'], '0')
+        self.assertTrue(any(item.value == '0 current / 0 historical' for item in self.app.caption))
         self.assertTrue(all(item.proto.help for item in self.app.metric))
         self.assertEqual([item.value for item in self.app.subheader],
                          ['GRAND TOTALS (USD)', 'PORTFOLIO COVERAGE', 'REVIEW WORKLOAD'])

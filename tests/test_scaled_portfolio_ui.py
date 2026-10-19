@@ -381,12 +381,17 @@ class ScaledPortfolioUITests(unittest.TestCase):
             'Estimated cash recovery under demo assumptions': 'Not estimated',
             'Realized recovery': 'USD 0.00',
         })
-        self.assertEqual(len(self.app.metric), 12)
+        self.assertEqual(len(self.app.metric), 13)
+        self.assertEqual(before['Total approved records'], '0')
+        self.assertEqual(after['Total approved records'], '127')
+        self.assertTrue(any(item.value == '0 current / 127 historical' for item in self.app.caption))
         self.assertEqual((before['Suppliers'], before['Contracts']), ('3', '4'))
         self.assertEqual((after['Suppliers'], after['Contracts']), ('5', '6'))
         from recovery.dashboard import BUCKET_LABELS
-        self.assertEqual({label: before[label] for label in BUCKET_LABELS.values()},
-                         {label: after[label] for label in BUCKET_LABELS.values()})
+        workload_labels = ['Current approved for draft' if key == 'approved' else label
+                           for key, label in BUCKET_LABELS.items()]
+        self.assertEqual({label: before[label] for label in workload_labels},
+                         {label: after[label] for label in workload_labels})
         self.assertFalse(self.app.expander)
         self.assertFalse(any('Locked migration archive:' in element.value for element in self.app.info))
         self.assertEqual(contents(self.db), after_import)
