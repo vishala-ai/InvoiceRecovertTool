@@ -40,12 +40,13 @@ PAGE_USAGE = {
     'Invoice review': (
         '**Find the right invoice:** choose the year, search for a vendor and narrow the '
         'contract. Use suggestions or your own search text to find a specific case.',
-        '**Inspect the finding:** choose Open on a row, compare the calculation with the '
+        '**Inspect the finding:** choose Open or select one checkbox, compare the calculation with the '
         'reviewed service-date rates and read the supporting evidence. Unresolved amounts '
         'remain Not established.',
         '**Record a decision:** approve for draft, reject or request more evidence after '
-        'inspection. Bulk approval applies only to eligible selected rows in one vendor '
-        'and contract on the displayed page. Migrated history is locked.',
+        'inspection. Two or more checked invoices show bulk approval instead of individual '
+        'decisions, within one vendor and contract on the displayed page. Opening a case '
+        'clears the checkbox selection. Migrated history is locked.',
     ),
     'Contract term review': (
         '**Follow the relationship:** select a vendor, then a contract or amendment. The '

@@ -182,6 +182,8 @@ def _table_edits(st, key, rows, selection_key, bulk_key, processed_key, last_ope
         return
     st.session_state[processed_key] = [key, signature]
     selected = dict(st.session_state.get(bulk_key, {}))
+    explicitly_opened = False
+    selection_changed = False
     for index, values in edits.items():
         if not str(index).isdigit() or int(index) >= len(rows):
             continue
@@ -190,14 +192,23 @@ def _table_edits(st, key, rows, selection_key, bulk_key, processed_key, last_ope
             st.session_state[selection_key] = line_id
             st.session_state[last_open_key] = line_id
             st.session_state[open_token_key] = dict(rows[int(index)])
+            explicitly_opened = True
         elif values.get('Open') is False and st.session_state.get(selection_key) == line_id:
             st.session_state.pop(selection_key, None)
             st.session_state.pop(open_token_key, None)
+            selected.pop(line_id, None)
+            selection_changed = True
         if 'Select' in values:
+            selection_changed = True
             if values['Select'] is True:
                 selected[line_id] = dict(rows[int(index)])
             else:
                 selected.pop(line_id, None)
+    if explicitly_opened:
+        selected = {}
+    elif selection_changed:
+        st.session_state.pop(selection_key, None)
+        st.session_state.pop(open_token_key, None)
     st.session_state[bulk_key] = selected
 
 
@@ -256,7 +267,7 @@ def _evidence_link(st, db, case, tenant):
         st.rerun()
 
 
-def _prepare(st, db, checkpoints, case, tenant):
+def _prepare(st, db, checkpoints, case, tenant, *, checkbox_key=None):
     workflow = case.get('workflow')
     saved = workflow['state'] if workflow else {}
     line_id = case['line_id']
@@ -349,6 +360,8 @@ def _prepare(st, db, checkpoints, case, tenant):
                         context_tokens=context_tokens, retrieval_index=retrieval_index,
                         allow_provider=allow_provider, allow_embeddings=allow_embeddings)
             st.session_state.pop(panel_key, None)
+            if checkbox_key is not None:
+                st.session_state[checkbox_key] = {}
             st.session_state.pop(f'invoice_open_token:{db.resolve()}', None)
             st.rerun()
         except ERRORS as exc:
@@ -514,7 +527,8 @@ def render_invoice_review(st, db, *, tenant='DEMO'):
         st.session_state.pop(f'invoice_bulk_results:{prefix}', None)
         st.session_state[last_context_key] = context
     selected = set(st.session_state.get(bulk_key, {})) & set(ids)
-    st.caption('Open an invoice to inspect it. Select checkboxes only for a bulk decision. '
+    st.caption('Open an invoice or select one checkbox for an individual review. Select two or more '
+               'eligible invoices in the same contract for bulk approval. '
                'Approved and rejected invoices remain in All cases. '
                'Select-all applies only to eligible invoices on this displayed page.')
     if st.session_state.get(selection_key) not in ids:
@@ -532,6 +546,18 @@ def render_invoice_review(st, db, *, tenant='DEMO'):
     if right.button('Clear selection', disabled=not selected):
         st.session_state[bulk_key] = {}
         selected = set()
+        st.session_state.pop(selection_key, None)
+        st.session_state.pop(open_token_key, None)
+    if len(selected) == 1:
+        # Preserve the displayed token when moving from bulk back to one case.
+        # A fresh workflow arriving during a rerun must still require re-review.
+        token = st.session_state[bulk_key][next(iter(selected))]
+        st.session_state[selection_key] = token['line_id']
+        st.session_state[last_open_key] = token['line_id']
+        st.session_state[open_token_key] = dict(token)
+    elif selected:
+        st.session_state.pop(selection_key, None)
+        st.session_state.pop(open_token_key, None)
     opened = st.session_state.get(selection_key)
     rows = [{'Open': case['line_id'] == opened, 'Select': case['line_id'] in selected,
         'Case ID': case['line_id'], 'Vendor': case['vendor_name'], 'Contract': case['contract_id'],
@@ -545,12 +571,15 @@ def render_invoice_review(st, db, *, tenant='DEMO'):
     table_intro(st, 'Invoice cases',
         'Current invoice lines within your vendor, contract and review filters, ordered by '
         'known candidate value. Open a case to inspect its calculation and evidence. Select '
-        'eligible cases from one vendor and contract for a bulk approval; amounts shown here '
+        'one invoice for individual decisions or two or more eligible cases from one vendor '
+        'and contract for bulk approval; amounts shown here '
         'are candidates, not recovered cash.', row_count=len(rows), total_count=len(filtered))
     column_overrides = {
         'Open': 'Open this invoice line below to review its calculation, supporting evidence '
-                'and available decisions. Opening a case does not approve it.',
-        'Select': 'Include this visible invoice in a bulk decision. Approval still requires '
+                'and individual decisions. Opening a case clears the checkbox selection '
+                'and does not approve it.',
+        'Select': 'Select one visible invoice for individual review, or two or more for a '
+                  'bulk decision. Approval still requires '
                   'a current validated review and no unresolved evidence blockers.',
         'Candidate amount': 'The supported potential discrepancy after eligible credits and '
                             'refunds, in the invoice currency. Not established means evidence '
@@ -568,7 +597,7 @@ def render_invoice_review(st, db, *, tenant='DEMO'):
             selection_key, bulk_key, processed, last_open_key, open_token_key))
     selected = set(st.session_state.get(bulk_key, {})) & set(ids)
     chosen = [case for case in visible if case['line_id'] in selected]
-    if chosen:
+    if len(chosen) > 1:
         st.markdown(f'**{len(chosen)} selected invoice(s)**')
         pinned = st.session_state[bulk_key]
         totals = {}
@@ -598,7 +627,7 @@ def render_invoice_review(st, db, *, tenant='DEMO'):
             note = st.text_area('Bulk evidence review note')
             approve = st.form_submit_button('Approve selected for draft',
                 disabled=not vendor or not contract or bool(unready) or changed)
-        if approve:
+        if approve and vendor and contract and not unready and not changed:
             try:
                 outcomes = decide_selected(db, checkpoints, [pinned[case['line_id']] for case in chosen],
                     supplier_id=vendor, contract_id=contract, reviewer=reviewer, note=note, tenant=tenant)
@@ -620,6 +649,8 @@ def render_invoice_review(st, db, *, tenant='DEMO'):
                 'Details': 'The reason for this case outcome, including any evidence, freshness '
                            'or preparation issue to address before another attempt.',
             })
+    if len(chosen) > 1:
+        return
     line_id = st.session_state.get(selection_key)
     if line_id not in ids:
         st.info('Choose Open beside an invoice to review its calculation and evidence.')
@@ -642,13 +673,14 @@ def render_invoice_review(st, db, *, tenant='DEMO'):
         if st.button('Reassess with current evidence', key=f'invoice_reassess:{line_id}'):
             try:
                 reassess_case(db, line_id, action_id=uuid.uuid4().hex, tenant=tenant)
+                st.session_state[bulk_key] = {}
                 st.session_state.pop(open_token_key, None)
                 st.session_state[notice_key] = f'{line_id}: reassessed with current evidence.'
                 st.rerun()
             except ERRORS as exc:
                 st.error(f'Reassessment not saved: {exc}')
     if case['status'] == 'CANDIDATE':
-        _prepare(st, db, checkpoints, case, tenant)
+        _prepare(st, db, checkpoints, case, tenant, checkbox_key=bulk_key)
         _decisions(st, db, checkpoints, case, tenant, notice_key, st.session_state[open_token_key])
     else:
         if case.get('committed'):

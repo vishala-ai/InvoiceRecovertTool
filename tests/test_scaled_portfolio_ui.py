@@ -200,9 +200,11 @@ class ScaledPortfolioUITests(unittest.TestCase):
         self.widget('button', 'Select all eligible in this contract').click().run()
         table = self.helper.invoice_table().value
         self.assertEqual(table.loc[table['Select'], 'Case ID'].tolist(), ['SCALE-2026-0120'])
-        self.widget('text_input', 'Bulk reviewer label').set_value('Synthetic accountant')
-        self.widget('text_area', 'Bulk evidence review note').set_value('Checked the one selected visible invoice.')
-        self.widget('button', 'Approve selected for draft').click().run()
+        self.assertEqual(self.helper.selected_line(), 'SCALE-2026-0120')
+        self.assertFalse(any(button.label == 'Approve selected for draft' for button in self.app.button))
+        self.widget('text_input', 'Reviewer label').set_value('Synthetic accountant')
+        self.widget('text_area', 'Evidence review note').set_value('Checked the one selected visible invoice.')
+        self.widget('button', 'Approve for draft').click().run()
         self.clean()
         workflows = {row['state']['line_id']: row for row in list_review_workflows(self.db, self.cp)}
         self.assertEqual(workflows['SCALE-2026-0120']['state']['outcome']['decision'], 'APPROVED_FOR_DRAFT')

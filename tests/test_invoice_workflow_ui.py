@@ -174,14 +174,100 @@ class InvoiceTableSelectionTests(InvoiceWorklistFixture):
         self.helper.widget('selectbox', 'Vendor').select('SUP-A').run()
         self.helper.widget('selectbox', 'Contract').select('CTR-A').run()
 
-    def select_line(self, line):
+    def select_line(self, line, selected=True):
         helper = self.helper
         table = helper.invoice_table()
         position = helper.visible_lines().index(line)
-        helper.app.session_state[table.key] = {'edited_rows': {position: {'Select': True}},
+        helper.app.session_state[table.key] = {'edited_rows': {position: {'Select': selected}},
                                               'added_rows': [], 'deleted_rows': []}
         helper.app.run()
         helper.assert_clean()
+
+    def assert_single_mode(self, line):
+        self.assertEqual(self.helper.selected_line(), line)
+        self.assertTrue(self.helper.decision_buttons())
+        self.assertFalse(any(item.label == 'Approve selected for draft'
+                             for item in self.helper.app.button))
+        self.assertFalse(any(item.label == 'Bulk reviewer label'
+                             for item in self.helper.app.text_input))
+
+    def assert_bulk_mode(self):
+        self.assertIsNone(self.helper.selected_line())
+        self.assertFalse(self.helper.decision_buttons())
+        self.assertTrue(any(item.label == 'Approve selected for draft'
+                            for item in self.helper.app.button))
+        self.assertFalse(any(item.label == 'Evidence review note'
+                             for item in self.helper.app.text_area))
+
+    def test_single_checkbox_and_multiple_selection_show_only_their_own_decision_form(self):
+        self.prepare('L004')
+        self.prepare('L011')
+        self.start_table()
+        self.helper.open_line('L001')
+        self.select_line('L004')
+        self.assert_single_mode('L004')
+        self.select_line('L011')
+        self.assert_bulk_mode()
+        self.select_line('L011', selected=False)
+        self.assert_single_mode('L004')
+        self.assert_baseline(0)
+
+    def test_explicit_open_exits_bulk_and_clears_checked_rows(self):
+        self.prepare('L004')
+        self.prepare('L011')
+        self.start_table()
+        self.select_line('L004')
+        self.select_line('L011')
+        self.assert_bulk_mode()
+        self.helper.open_line('L011')
+        self.assert_single_mode('L011')
+        self.assertFalse(self.helper.invoice_table().value['Select'].any())
+        self.assert_baseline(0)
+
+    def test_clear_selection_closes_the_checkbox_single_or_bulk_review(self):
+        self.prepare('L004')
+        self.prepare('L011')
+        self.start_table()
+        self.select_line('L004')
+        self.assert_single_mode('L004')
+        self.helper.widget('button', 'Clear selection').click().run()
+        self.assertIsNone(self.helper.selected_line())
+        self.assertFalse(self.helper.decision_buttons())
+        self.select_line('L004')
+        self.select_line('L011')
+        self.assert_bulk_mode()
+        self.helper.widget('button', 'Clear selection').click().run()
+        self.assertIsNone(self.helper.selected_line())
+        self.assertFalse(self.helper.decision_buttons())
+        self.assertFalse(any(item.label == 'Approve selected for draft'
+                             for item in self.helper.app.button))
+        self.assert_baseline(0)
+
+    def test_deselecting_the_only_checked_case_does_not_restore_an_older_open_case(self):
+        self.prepare('L004')
+        self.start_table()
+        self.helper.open_line('L001')
+        self.select_line('L004')
+        self.assert_single_mode('L004')
+        self.select_line('L004', selected=False)
+        self.assertIsNone(self.helper.selected_line())
+        self.assertFalse(self.helper.decision_buttons())
+        self.assert_baseline(0)
+
+    def test_bulk_to_single_preserves_the_original_review_token_after_a_new_attempt(self):
+        self.prepare('L004')
+        self.prepare('L011')
+        self.start_table()
+        self.select_line('L004')
+        self.select_line('L011')
+        before = self.cases()['L004']
+        lifecycle.start_linked_review(self.db, self.cp, 'DEMO', before['assessment_id'],
+            idempotency_key='concurrent-bulk-to-single-attempt', use_llm=False)
+        self.select_line('L011', selected=False)
+        self.assert_single_mode('L004')
+        self.assertTrue(all(button.disabled for button in self.helper.decision_buttons()))
+        self.assertTrue(any('changed' in item.value.lower() for item in self.helper.app.warning))
+        self.assert_baseline(0)
 
     def test_select_all_only_selects_ready_cases_in_the_current_contract(self):
         self.prepare('L004')
@@ -203,10 +289,39 @@ class InvoiceTableSelectionTests(InvoiceWorklistFixture):
         self.assertEqual(receipts['Result'].tolist(), ['APPROVED_FOR_DRAFT'] * 2)
         self.assert_baseline(2)
 
-    def test_bulk_preview_keeps_original_attempt_when_a_new_ready_thread_appears(self):
-        self.prepare('L004')
+    def test_single_checkbox_can_prepare_a_review_and_save_an_individual_decision(self):
         self.start_table()
         self.select_line('L004')
+        self.assert_single_mode('L004')
+        self.assertTrue(all(button.disabled for button in self.helper.decision_buttons()))
+        self.helper.widget('button', 'Prepare review').click().run()
+        self.helper.widget('button', 'Prepare review workflow').click().run()
+        self.helper.assert_clean()
+        self.assert_single_mode('L004')
+        self.assertFalse(self.helper.invoice_table().value['Select'].any())
+        self.assertFalse(self.helper.widget('button', 'Approve for draft').disabled)
+        self.helper.widget('text_input', 'Reviewer label').set_value('Synthetic accountant')
+        self.helper.widget('text_area', 'Evidence review note').set_value('Checked this one case.')
+        self.helper.widget('button', 'Approve for draft').click().run()
+        self.helper.assert_clean()
+        self.assert_baseline(1)
+
+    def test_single_checkbox_reassessment_keeps_the_case_open_without_a_stale_selection(self):
+        self.start_table()
+        self.select_line('L004')
+        self.helper.widget('button', 'Reassess with current evidence').click().run()
+        self.helper.assert_clean()
+        self.assert_single_mode('L004')
+        self.assertFalse(self.helper.invoice_table().value['Select'].any())
+        self.assertFalse(any('changed after you opened' in item.value for item in self.helper.app.warning))
+        self.assert_baseline(0)
+
+    def test_bulk_preview_keeps_original_attempt_when_a_new_ready_thread_appears(self):
+        self.prepare('L004')
+        self.prepare('L011')
+        self.start_table()
+        self.select_line('L004')
+        self.select_line('L011')
         before = self.cases()['L004']
         self.helper.widget('text_input', 'Bulk reviewer label').set_value('Accountant')
         self.helper.widget('text_area', 'Bulk evidence review note').set_value('Reviewed displayed attempt.')
@@ -257,14 +372,18 @@ class InvoiceTableSelectionTests(InvoiceWorklistFixture):
         self.assertFalse(any(item.label == 'Prepare review workflow' for item in self.helper.app.button))
         self.assert_baseline(0)
 
-    def test_unknown_selected_amount_is_not_reported_as_zero(self):
+    def test_unknown_single_selected_amount_is_not_reported_as_zero_or_bulk_approved(self):
         self.helper.app.run()
         self.select_line('L006')
-        self.assertTrue(any('candidate amount not established' in item.value
-                            for item in self.helper.app.caption))
+        self.assertEqual(self.helper.selected_line(), 'L006')
+        calculation = next(item.value for item in self.helper.app.dataframe
+                           if 'Calculation' in item.value.columns)
+        self.assertEqual(calculation.iloc[-1]['Amount'], 'Not established')
         self.assertFalse(any('Selected known candidate total:' in item.value
                              for item in self.helper.app.caption))
-        self.assertTrue(self.helper.widget('button', 'Approve selected for draft').disabled)
+        self.assertFalse(self.helper.decision_buttons())
+        self.assertFalse(any(item.label == 'Approve selected for draft'
+                             for item in self.helper.app.button))
         self.assert_baseline(0)
 
 

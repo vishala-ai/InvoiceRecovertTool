@@ -28,9 +28,9 @@
     },
     {
       "path": "README.md",
-      "sha256": "470423ec5094c0b290727100f327e0190ca1acd05a4fa00cf36b479ac6bcab74",
-      "source_sha256": "470423ec5094c0b290727100f327e0190ca1acd05a4fa00cf36b479ac6bcab74",
-      "bytes": 55713,
+      "sha256": "83f723463302813b36a7cdba248ba5fafa5390c05583ca7af7225096ed5ea5e4",
+      "source_sha256": "83f723463302813b36a7cdba248ba5fafa5390c05583ca7af7225096ed5ea5e4",
+      "bytes": 55977,
       "transformed": false
     },
     {
@@ -238,9 +238,9 @@
     },
     {
       "path": "docs/IMPLEMENTATION_GUIDE.md",
-      "sha256": "b0ed919b74d8d0145bb1057947f0b9294f82bce0ed20738a4c872a2eb77184d6",
-      "source_sha256": "b0ed919b74d8d0145bb1057947f0b9294f82bce0ed20738a4c872a2eb77184d6",
-      "bytes": 53881,
+      "sha256": "9c0efc72b4fc2b5c2163aa70c5f6710975f7897233f88c5b8628f9371d0a037c",
+      "source_sha256": "9c0efc72b4fc2b5c2163aa70c5f6710975f7897233f88c5b8628f9371d0a037c",
+      "bytes": 54700,
       "transformed": false
     },
     {
@@ -497,9 +497,9 @@
     },
     {
       "path": "src/recovery/invoice_ui.py",
-      "sha256": "22ee97ea80448be26211fed6d9ed1d42f0b936863e2628197b7dbbf2dd9ec5ba",
-      "source_sha256": "22ee97ea80448be26211fed6d9ed1d42f0b936863e2628197b7dbbf2dd9ec5ba",
-      "bytes": 39177,
+      "sha256": "55d4603180f4738a8f773adcee5c29913f0fccf5f97f4f698ff2a462e7c9259c",
+      "source_sha256": "55d4603180f4738a8f773adcee5c29913f0fccf5f97f4f698ff2a462e7c9259c",
+      "bytes": 40759,
       "transformed": false
     },
     {
@@ -658,9 +658,9 @@
     },
     {
       "path": "src/recovery/workspace_ui.py",
-      "sha256": "ee3d0c414f34e3ee17b4984fc65ae70fc4325521f0a8bdc61785a7055f0376c4",
-      "source_sha256": "ee3d0c414f34e3ee17b4984fc65ae70fc4325521f0a8bdc61785a7055f0376c4",
-      "bytes": 8989,
+      "sha256": "2df8bc7f647dabfe6c6fac5d4ab85b762d7e24e399b4bb2fad753380a7ea58c9",
+      "source_sha256": "2df8bc7f647dabfe6c6fac5d4ab85b762d7e24e399b4bb2fad753380a7ea58c9",
+      "bytes": 9092,
       "transformed": false
     },
     {
@@ -882,9 +882,9 @@
     },
     {
       "path": "tests/test_invoice_workflow_ui.py",
-      "sha256": "071431654c4fa9c07196e1f511ecf3bbe51166c3a21918a0d30dee14bc23f38e",
-      "source_sha256": "071431654c4fa9c07196e1f511ecf3bbe51166c3a21918a0d30dee14bc23f38e",
-      "bytes": 13912,
+      "sha256": "3197265af4004908e5afa49fbc0350cdfd0f081da687d1b0ae47918a1683d5a7",
+      "source_sha256": "3197265af4004908e5afa49fbc0350cdfd0f081da687d1b0ae47918a1683d5a7",
+      "bytes": 19626,
       "transformed": false
     },
     {
@@ -966,9 +966,9 @@
     },
     {
       "path": "tests/test_scaled_portfolio_ui.py",
-      "sha256": "2b697d891d99697576e6a71100e35ec940b53ed4ed12679d311bfc9becdb88c8",
-      "source_sha256": "2b697d891d99697576e6a71100e35ec940b53ed4ed12679d311bfc9becdb88c8",
-      "bytes": 22508,
+      "sha256": "4c165753f37f4624936bc78052f4a4bbf76dbd720bcdda9614ddd1d0cff4764e",
+      "source_sha256": "4c165753f37f4624936bc78052f4a4bbf76dbd720bcdda9614ddd1d0cff4764e",
+      "bytes": 22668,
       "transformed": false
     },
     {
