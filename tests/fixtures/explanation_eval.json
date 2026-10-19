@@ -1,0 +1,466 @@
+{
+  "version": 1,
+  "label_status": "PROVISIONAL_PENDING_SME_REVIEW",
+  "label_author": "Developer-authored synthetic regression labels; no independent SME approval",
+  "purpose": "Controlled claim alignment and separate financial/citation checks, not general semantic faithfulness or held-out performance",
+  "operational_use": "TEST_ONLY; never load from recovery runtime modules",
+  "local_line_ids": [
+    "L001",
+    "L011",
+    "L006"
+  ],
+  "cases": [
+    {
+      "id": "l001_superseding_amendment",
+      "line_id": "L001",
+      "fact_assertions": {
+        "case.status": "CANDIDATE",
+        "case.currency": "USD",
+        "case.net_candidate": "80000.00",
+        "component.SVC-001-1.rate": "120.00"
+      },
+      "changes": [],
+      "expected": {
+        "claim_status": "PASSED",
+        "classifications": {},
+        "missing_fact_ids": [],
+        "financial_consistency": true,
+        "citation_validation": "PASSED",
+        "draft_status": "PASSED"
+      }
+    },
+    {
+      "id": "l004_net_after_applied_credit",
+      "line_id": "L004",
+      "fact_assertions": {
+        "case.gross_discrepancy": "1000.00",
+        "case.offsets": "400.00",
+        "case.net_candidate": "600.00"
+      },
+      "changes": [],
+      "expected": {
+        "claim_status": "PASSED",
+        "classifications": {},
+        "missing_fact_ids": [],
+        "financial_consistency": true,
+        "citation_validation": "PASSED",
+        "draft_status": "PASSED"
+      }
+    },
+    {
+      "id": "l011_both_service_rate_periods",
+      "line_id": "L011",
+      "fact_assertions": {
+        "case.billed_amount": "2600.00",
+        "case.expected_amount": "2500.00",
+        "case.net_candidate": "100.00",
+        "component.SVC-011-1.rate": "130.00",
+        "component.SVC-011-2.rate": "120.00"
+      },
+      "changes": [],
+      "expected": {
+        "claim_status": "PASSED",
+        "classifications": {},
+        "missing_fact_ids": [],
+        "financial_consistency": true,
+        "citation_validation": "PASSED",
+        "draft_status": "PASSED"
+      }
+    },
+    {
+      "id": "l002_no_discrepancy",
+      "line_id": "L002",
+      "fact_assertions": {
+        "case.status": "NO_DISCREPANCY",
+        "case.net_candidate": "0.00"
+      },
+      "changes": [],
+      "expected": {
+        "claim_status": "PASSED",
+        "classifications": {},
+        "missing_fact_ids": [],
+        "financial_consistency": true,
+        "citation_validation": "PASSED",
+        "draft_status": "PASSED"
+      }
+    },
+    {
+      "id": "l003_existing_offset_is_not_new_recovery",
+      "line_id": "L003",
+      "fact_assertions": {
+        "case.status": "ALREADY_OFFSET",
+        "case.net_candidate": "0.00",
+        "case.realized_recovery": "0.00"
+      },
+      "changes": [],
+      "expected": {
+        "claim_status": "PASSED",
+        "classifications": {},
+        "missing_fact_ids": [],
+        "financial_consistency": true,
+        "citation_validation": "PASSED",
+        "draft_status": "PASSED"
+      }
+    },
+    {
+      "id": "l006_conflicting_terms_remain_unknown",
+      "line_id": "L006",
+      "fact_assertions": {
+        "case.status": "NEEDS_REVIEW",
+        "case.reason": "CONFLICTING_TERMS",
+        "case.expected_amount": null,
+        "case.gross_discrepancy": null,
+        "case.offsets": null,
+        "case.net_candidate": "0.00"
+      },
+      "changes": [],
+      "expected": {
+        "claim_status": "PASSED",
+        "classifications": {},
+        "missing_fact_ids": [],
+        "financial_consistency": true,
+        "citation_validation": "PASSED",
+        "draft_status": "PASSED"
+      }
+    },
+    {
+      "id": "l008_unpaid",
+      "line_id": "L008",
+      "fact_assertions": {
+        "case.status": "UNPAID",
+        "case.net_candidate": "0.00"
+      },
+      "changes": [],
+      "expected": {
+        "claim_status": "PASSED",
+        "classifications": {},
+        "missing_fact_ids": [],
+        "financial_consistency": true,
+        "citation_validation": "PASSED",
+        "draft_status": "PASSED"
+      }
+    },
+    {
+      "id": "l017_fractional_hours",
+      "line_id": "L017",
+      "fact_assertions": {
+        "case.net_candidate": "7.50",
+        "case.expected_amount": "90.00"
+      },
+      "changes": [],
+      "expected": {
+        "claim_status": "PASSED",
+        "classifications": {},
+        "missing_fact_ids": [],
+        "financial_consistency": true,
+        "citation_validation": "PASSED",
+        "draft_status": "PASSED"
+      }
+    },
+    {
+      "id": "l011_false_no_discrepancy",
+      "line_id": "L011",
+      "fact_assertions": {
+        "case.status": "CANDIDATE",
+        "case.net_candidate": "100.00"
+      },
+      "changes": [
+        {
+          "op": "replace",
+          "fact_id": "case.status",
+          "value": "NO_DISCREPANCY"
+        },
+        {
+          "op": "replace",
+          "fact_id": "case.net_candidate",
+          "value": "0.00"
+        }
+      ],
+      "expected": {
+        "claim_status": "WITHHELD",
+        "classifications": {
+          "case.status": "contradicted",
+          "case.net_candidate": "contradicted"
+        },
+        "missing_fact_ids": [
+          "case.net_candidate",
+          "case.status"
+        ],
+        "financial_consistency": false,
+        "citation_validation": "PASSED",
+        "draft_status": "WITHHELD"
+      }
+    },
+    {
+      "id": "l011_unsupported_no_amendment",
+      "line_id": "L011",
+      "fact_assertions": {
+        "component.SVC-011-2.rate": "120.00"
+      },
+      "changes": [
+        {
+          "op": "add",
+          "fact_id": "evidence.no_amendment",
+          "value": "No amendment evidence exists."
+        }
+      ],
+      "expected": {
+        "claim_status": "WITHHELD",
+        "classifications": {
+          "evidence.no_amendment": "unsupported"
+        },
+        "missing_fact_ids": [],
+        "financial_consistency": true,
+        "citation_validation": "PASSED",
+        "draft_status": "WITHHELD"
+      }
+    },
+    {
+      "id": "l011_late_rate_missing",
+      "line_id": "L011",
+      "fact_assertions": {
+        "component.SVC-011-2.rate": "120.00"
+      },
+      "changes": [
+        {
+          "op": "remove",
+          "fact_id": "component.SVC-011-2.rate"
+        }
+      ],
+      "expected": {
+        "claim_status": "WITHHELD",
+        "classifications": {},
+        "missing_fact_ids": [
+          "component.SVC-011-2.rate"
+        ],
+        "financial_consistency": false,
+        "citation_validation": "PASSED",
+        "draft_status": "WITHHELD"
+      }
+    },
+    {
+      "id": "l011_late_period_uses_obsolete_rate",
+      "line_id": "L011",
+      "fact_assertions": {
+        "component.SVC-011-2.rate": "120.00"
+      },
+      "changes": [
+        {
+          "op": "replace",
+          "fact_id": "component.SVC-011-2.rate",
+          "value": "130.00"
+        }
+      ],
+      "expected": {
+        "claim_status": "WITHHELD",
+        "classifications": {
+          "component.SVC-011-2.rate": "contradicted"
+        },
+        "missing_fact_ids": [
+          "component.SVC-011-2.rate"
+        ],
+        "financial_consistency": false,
+        "citation_validation": "PASSED",
+        "draft_status": "WITHHELD"
+      }
+    },
+    {
+      "id": "l001_wrong_currency",
+      "line_id": "L001",
+      "fact_assertions": {
+        "case.currency": "USD"
+      },
+      "changes": [
+        {
+          "op": "replace",
+          "fact_id": "case.currency",
+          "value": "EUR"
+        }
+      ],
+      "expected": {
+        "claim_status": "WITHHELD",
+        "classifications": {
+          "case.currency": "contradicted"
+        },
+        "missing_fact_ids": [
+          "case.currency"
+        ],
+        "financial_consistency": false,
+        "citation_validation": "PASSED",
+        "draft_status": "WITHHELD"
+      }
+    },
+    {
+      "id": "l001_wrong_billed_amount",
+      "line_id": "L001",
+      "fact_assertions": {
+        "case.billed_amount": "1040000.00"
+      },
+      "changes": [
+        {
+          "op": "replace",
+          "fact_id": "case.billed_amount",
+          "value": "104000.00"
+        }
+      ],
+      "expected": {
+        "claim_status": "WITHHELD",
+        "classifications": {
+          "case.billed_amount": "contradicted"
+        },
+        "missing_fact_ids": [
+          "case.billed_amount"
+        ],
+        "financial_consistency": false,
+        "citation_validation": "PASSED",
+        "draft_status": "WITHHELD"
+      }
+    },
+    {
+      "id": "l011_misformatted_money_is_not_exact",
+      "line_id": "L011",
+      "fact_assertions": {
+        "case.net_candidate": "100.00"
+      },
+      "changes": [
+        {
+          "op": "replace",
+          "fact_id": "case.net_candidate",
+          "value": "100"
+        }
+      ],
+      "expected": {
+        "claim_status": "WITHHELD",
+        "classifications": {
+          "case.net_candidate": "contradicted"
+        },
+        "missing_fact_ids": [
+          "case.net_candidate"
+        ],
+        "financial_consistency": false,
+        "citation_validation": "PASSED",
+        "draft_status": "WITHHELD"
+      }
+    },
+    {
+      "id": "l006_unknown_expected_is_not_zero",
+      "line_id": "L006",
+      "fact_assertions": {
+        "case.expected_amount": null
+      },
+      "changes": [
+        {
+          "op": "replace",
+          "fact_id": "case.expected_amount",
+          "value": "0.00"
+        }
+      ],
+      "expected": {
+        "claim_status": "WITHHELD",
+        "classifications": {
+          "case.expected_amount": "contradicted"
+        },
+        "missing_fact_ids": [
+          "case.expected_amount"
+        ],
+        "financial_consistency": false,
+        "citation_validation": "PASSED",
+        "draft_status": "WITHHELD"
+      }
+    },
+    {
+      "id": "l001_candidate_is_not_realized_recovery",
+      "line_id": "L001",
+      "fact_assertions": {
+        "case.realized_recovery": "0.00"
+      },
+      "changes": [
+        {
+          "op": "replace",
+          "fact_id": "case.realized_recovery",
+          "value": "80000.00"
+        }
+      ],
+      "expected": {
+        "claim_status": "WITHHELD",
+        "classifications": {
+          "case.realized_recovery": "contradicted"
+        },
+        "missing_fact_ids": [
+          "case.realized_recovery"
+        ],
+        "financial_consistency": false,
+        "citation_validation": "PASSED",
+        "draft_status": "WITHHELD"
+      }
+    },
+    {
+      "id": "l011_omitted_governing_amendment_citation",
+      "line_id": "L011",
+      "fact_assertions": {
+        "case.net_candidate": "100.00"
+      },
+      "changes": [],
+      "expected": {
+        "claim_status": "PASSED",
+        "classifications": {},
+        "missing_fact_ids": [],
+        "financial_consistency": true,
+        "citation_validation": "WITHHELD",
+        "draft_status": "WITHHELD"
+      },
+      "citation_change": "omit_governing_amendment"
+    },
+    {
+      "id": "l011_fabricated_quote",
+      "line_id": "L011",
+      "fact_assertions": {
+        "case.net_candidate": "100.00"
+      },
+      "changes": [],
+      "expected": {
+        "claim_status": "PASSED",
+        "classifications": {},
+        "missing_fact_ids": [],
+        "financial_consistency": true,
+        "citation_validation": "WITHHELD",
+        "draft_status": "WITHHELD"
+      },
+      "citation_change": "fabricated_quote"
+    },
+    {
+      "id": "l011_unrelated_source_citation",
+      "line_id": "L011",
+      "fact_assertions": {
+        "case.net_candidate": "100.00"
+      },
+      "changes": [],
+      "expected": {
+        "claim_status": "PASSED",
+        "classifications": {},
+        "missing_fact_ids": [],
+        "financial_consistency": true,
+        "citation_validation": "WITHHELD",
+        "draft_status": "WITHHELD"
+      },
+      "citation_change": "unknown_document"
+    },
+    {
+      "id": "l011_incomplete_but_exact_governing_quote",
+      "line_id": "L011",
+      "fact_assertions": {
+        "case.net_candidate": "100.00"
+      },
+      "changes": [],
+      "citation_change": "incomplete_exact_quote",
+      "expected": {
+        "claim_status": "PASSED",
+        "classifications": {},
+        "missing_fact_ids": [],
+        "financial_consistency": true,
+        "citation_validation": "WITHHELD",
+        "draft_status": "WITHHELD"
+      }
+    }
+  ]
+}

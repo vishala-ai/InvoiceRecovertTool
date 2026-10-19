@@ -1,0 +1,147 @@
+{
+  "synthetic": true,
+  "expected_candidate_total": "80707.50",
+  "expected_case_count": 20,
+  "cases": [
+    {
+      "line_id": "L001",
+      "expected_status": "CANDIDATE",
+      "expected_net_candidate": "80000.00",
+      "scenario": "Main outdated purchase-order rate: eight thousand hours",
+      "reason": null
+    },
+    {
+      "line_id": "L002",
+      "expected_status": "NO_DISCREPANCY",
+      "expected_net_candidate": "0.00",
+      "scenario": "Correct amended rate",
+      "reason": null
+    },
+    {
+      "line_id": "L003",
+      "expected_status": "ALREADY_OFFSET",
+      "expected_net_candidate": "0.00",
+      "scenario": "Full pricing credit already applied",
+      "reason": null
+    },
+    {
+      "line_id": "L004",
+      "expected_status": "CANDIDATE",
+      "expected_net_candidate": "600.00",
+      "scenario": "Partial applied credit leaves six hundred",
+      "reason": null
+    },
+    {
+      "line_id": "L005",
+      "expected_status": "NO_DISCREPANCY",
+      "expected_net_candidate": "0.00",
+      "scenario": "Valid signed August rate increase",
+      "reason": null
+    },
+    {
+      "line_id": "L006",
+      "expected_status": "NEEDS_REVIEW",
+      "expected_net_candidate": "0.00",
+      "scenario": "Conflicting signed September amendments",
+      "reason": "CONFLICTING_TERMS"
+    },
+    {
+      "line_id": "L007",
+      "expected_status": "NEEDS_REVIEW",
+      "expected_net_candidate": "0.00",
+      "scenario": "Missing contract evidence",
+      "reason": "MISSING_TERMS"
+    },
+    {
+      "line_id": "L008",
+      "expected_status": "UNPAID",
+      "expected_net_candidate": "0.00",
+      "scenario": "Unpaid invoice is not a recovery",
+      "reason": null
+    },
+    {
+      "line_id": "L009",
+      "expected_status": "NEEDS_REVIEW",
+      "expected_net_candidate": "0.00",
+      "scenario": "Partial payment cannot be allocated safely",
+      "reason": "PARTIAL_OR_EXCESS_PAYMENT"
+    },
+    {
+      "line_id": "L010",
+      "expected_status": "NO_DISCREPANCY",
+      "expected_net_candidate": "0.00",
+      "scenario": "June boundary control uses original rate",
+      "reason": null
+    },
+    {
+      "line_id": "L011",
+      "expected_status": "CANDIDATE",
+      "expected_net_candidate": "100.00",
+      "scenario": "Service line crosses amendment boundary; use dated service records",
+      "reason": null
+    },
+    {
+      "line_id": "L012",
+      "expected_status": "NEEDS_REVIEW",
+      "expected_net_candidate": "0.00",
+      "scenario": "Invoice currency differs from contract",
+      "reason": "UNSUPPORTED_CURRENCY"
+    },
+    {
+      "line_id": "L013",
+      "expected_status": "NEEDS_REVIEW",
+      "expected_net_candidate": "0.00",
+      "scenario": "Timesheet hours do not reconcile",
+      "reason": "HOURS_MISMATCH"
+    },
+    {
+      "line_id": "L014",
+      "expected_status": "NEEDS_REVIEW",
+      "expected_net_candidate": "0.00",
+      "scenario": "Approved service records missing",
+      "reason": "MISSING_SERVICE_EVIDENCE"
+    },
+    {
+      "line_id": "L015",
+      "expected_status": "NO_DISCREPANCY",
+      "expected_net_candidate": "0.00",
+      "scenario": "Later rate increase is not applied to July",
+      "reason": null
+    },
+    {
+      "line_id": "L016",
+      "expected_status": "NEEDS_REVIEW",
+      "expected_net_candidate": "0.00",
+      "scenario": "Overtime is outside the regular-hour MVP",
+      "reason": "UNSUPPORTED_SCOPE"
+    },
+    {
+      "line_id": "L017",
+      "expected_status": "CANDIDATE",
+      "expected_net_candidate": "7.50",
+      "scenario": "Fractional hours and exact decimal arithmetic",
+      "reason": null
+    },
+    {
+      "line_id": "L018",
+      "expected_status": "ALREADY_OFFSET",
+      "expected_net_candidate": "0.00",
+      "scenario": "Cash refund already received",
+      "reason": null
+    },
+    {
+      "line_id": "L019",
+      "expected_status": "NEEDS_REVIEW",
+      "expected_net_candidate": "0.00",
+      "scenario": "Invoice extension does not reconcile",
+      "reason": "INVOICE_EXTENSION_MISMATCH"
+    },
+    {
+      "line_id": "L020",
+      "expected_status": "NEEDS_REVIEW",
+      "expected_net_candidate": "0.00",
+      "scenario": "Pending unapplied credit requires reconciliation",
+      "reason": "PENDING_ADJUSTMENT"
+    }
+  ]
+}

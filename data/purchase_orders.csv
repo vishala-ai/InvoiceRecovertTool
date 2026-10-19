@@ -1,0 +1,4 @@
+tenant_id,po_id,supplier_id,contract_id,role,currency,unit,po_rate
+DEMO,PO-SUP-A,SUP-A,CTR-A,ENGINEER,USD,HOUR,130
+DEMO,PO-SUP-B,SUP-B,CTR-B,ENGINEER,USD,HOUR,100
+DEMO,PO-SUP-C,SUP-C,CTR-C,ANALYST,USD,HOUR,100

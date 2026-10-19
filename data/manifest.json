@@ -1,0 +1,20 @@
+{
+  "synthetic": true,
+  "dataset_id": "synthetic-rate-recovery-v1",
+  "as_of": "2026-10-15",
+  "description": "Primarily Q3 2026, with June service-date boundary controls; settlements through October 15. All names and documents are invented.",
+  "tenants": {
+    "DEMO": {
+      "contracts_complete": true,
+      "payments_complete": true,
+      "adjustments_complete": true,
+      "attested_by": "synthetic-fixture-owner"
+    },
+    "OTHER": {
+      "contracts_complete": true,
+      "payments_complete": true,
+      "adjustments_complete": true,
+      "attested_by": "synthetic-fixture-owner"
+    }
+  }
+}

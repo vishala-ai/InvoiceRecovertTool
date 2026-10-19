@@ -1,0 +1,5 @@
+tenant_id,supplier_id,name
+DEMO,SUP-A,AsterTech Synthetic Services
+DEMO,SUP-B,BeaconStaff Synthetic Services
+DEMO,SUP-C,Cedar Analytics Synthetic Services
+OTHER,SUP-A,Isolation Canary — NOT a DEMO supplier
