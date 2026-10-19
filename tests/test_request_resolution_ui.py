@@ -89,10 +89,59 @@ class RequestResolutionUITests(unittest.TestCase):
         self.assertTrue(any('Review evidence for ' + request['line_id'] == item.value
                             for item in self.app.subheader))
 
+    def test_only_one_action_is_visible_and_switching_actions_is_read_only(self):
+        from test_semantic_ui import database_contents
+
+        request = self.request('L004')
+        self.open_page()
+        self.select_request(request)
+        self.assertEqual(self.widget('selectbox', 'Next action').value, 'Attach existing document')
+        before = (database_contents(self.db), database_contents(self.checkpoints))
+        actions = {
+            'Attach existing document': 'Attach supporting document',
+            'Add new document': 'Save document for review',
+            'Review and resolve': 'Resolve evidence request',
+            'Reassess case': 'Reassess selected case',
+        }
+        for action, button in actions.items():
+            with self.subTest(action=action):
+                self.widget('selectbox', 'Next action').select(action).run()
+                self.assert_clean()
+                visible = {item.label for item in self.app.button} & set(actions.values())
+                self.assertEqual(visible, {button})
+                self.assertLessEqual(sum(item.label == 'Reviewer label (demo only)'
+                                         for item in self.app.text_input), 1)
+                self.assertTrue(any(item.label == 'Open invoice review' for item in self.app.button))
+                guide = next(item for item in self.app.expander if item.label == 'How to use this page')
+                self.assertFalse(guide.proto.expanded)
+        self.assertEqual((database_contents(self.db), database_contents(self.checkpoints)), before)
+
+    def test_changing_requests_resets_action_document_and_reviewer_inputs(self):
+        from test_semantic_ui import database_contents
+
+        first = self.request('L001')
+        second = self.request('L004')
+        self.open_page()
+        self.select_request(first)
+        source = next(source for source in lifecycle.list_sources(self.db, 'DEMO')
+                      if source['doc_id'] == 'DOC-A2')
+        self.widget('selectbox', 'Supporting contract document').select(source['version_id'])
+        self.widget('text_input', 'Reviewer label (demo only)').set_value('First request reviewer')
+        self.widget('text_area', 'Review rationale').set_value('Only for the first request.')
+        self.widget('selectbox', 'Next action').select('Add new document').run()
+        before = (database_contents(self.db), database_contents(self.checkpoints))
+        self.select_request(second)
+        self.assertEqual(self.widget('selectbox', 'Next action').value, 'Attach existing document')
+        self.assertEqual(self.widget('selectbox', 'Supporting contract document').value, '')
+        self.assertEqual(self.widget('text_input', 'Reviewer label (demo only)').value, '')
+        self.assertEqual(self.widget('text_area', 'Review rationale').value, '')
+        self.assertEqual((database_contents(self.db), database_contents(self.checkpoints)), before)
+
     def test_selected_request_reassesses_its_invoice_and_links_prior_decision(self):
         request = self.request('L004')
         self.open_page()
         self.select_request(request)
+        self.widget('selectbox', 'Next action').select('Reassess case').run()
         self.assertFalse(any(item.label == 'Invoice line to reassess' for item in self.app.selectbox))
         other_history = lifecycle.list_assessments(self.db, 'DEMO', 'L001')
         prior_count = len(lifecycle.list_assessments(self.db, 'DEMO', 'L004'))
@@ -111,6 +160,7 @@ class RequestResolutionUITests(unittest.TestCase):
         for selected in (second, first, second):
             with self.subTest(line=selected['line_id']):
                 self.select_request(selected)
+                self.widget('selectbox', 'Next action').select('Reassess case').run()
                 before = len(lifecycle.list_assessments(self.db, 'DEMO', selected['line_id']))
                 self.widget('button', 'Reassess selected case').click().run()
                 self.assert_clean()
@@ -138,6 +188,12 @@ class RequestResolutionUITests(unittest.TestCase):
         self.widget('button', 'Attach supporting document').click().run()
         self.assert_clean()
         self.assertEqual(lifecycle.list_requests(self.db, 'DEMO', 'L004')[0]['status'], 'EVIDENCE_ATTACHED')
+        self.assertEqual(self.widget('selectbox', 'Next action').value, 'Review and resolve')
+        self.assertFalse(any(item.label == 'Attach supporting document' for item in self.app.button))
+        self.assertEqual(self.widget('selectbox', 'Attached contract document').value, source['version_id'])
+        self.assertTrue(any(item.label == 'Read attached document' for item in self.app.expander))
+        # Streamlit's text renderer strips surrounding whitespace, not source wording.
+        self.assertTrue(any(item.value == source['body'].strip() for item in self.app.text))
         prefix = f'lifecycle:evidence:{self.db.resolve()}:DEMO:resolution:' + request['request_id']
         self.app.text_input(key=prefix + ':reviewer').set_value('Synthetic reviewer')
         self.app.text_area(key=prefix + ':note').set_value('The reviewed amendment satisfies this contract request.')

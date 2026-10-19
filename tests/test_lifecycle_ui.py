@@ -306,7 +306,11 @@ class LifecycleUITests(unittest.TestCase):
         self.request()
         self.choose_request()
         source = next(source for source in self.lifecycle.list_sources(self.db, 'DEMO') if source['doc_id'] == 'DOC-A2')
+        self.assertEqual(self.widget('selectbox', 'Next action').value, 'Attach existing document')
+        self.assertFalse(any(item.label == 'Resolve evidence request' for item in self.app.button))
+        self.widget('selectbox', 'Next action').select('Review and resolve').run()
         self.assertTrue(self.widget('button', 'Resolve evidence request').disabled)
+        self.widget('selectbox', 'Next action').select('Attach existing document').run()
         self.widget('selectbox', 'Supporting contract document').select(source['version_id'])
         reviewers = [item for item in self.app.text_input if item.label == 'Reviewer label (demo only)']
         notes = [item for item in self.app.text_area if item.label == 'Review rationale']
@@ -315,8 +319,10 @@ class LifecycleUITests(unittest.TestCase):
         self.widget('button', 'Attach supporting document').click().run()
         self.assert_clean()
         self.assertEqual(self.lifecycle.list_requests(self.db, 'DEMO')[0]['status'], 'EVIDENCE_ATTACHED')
-        [item for item in self.app.text_input if item.label == 'Reviewer label (demo only)'][1].set_value('Synthetic reviewer')
-        [item for item in self.app.text_area if item.label == 'Review rationale'][1].set_value('The accepted amendment answers the contract request.')
+        self.assertEqual(self.widget('selectbox', 'Next action').value, 'Review and resolve')
+        self.assertFalse(any(item.label == 'Attach supporting document' for item in self.app.button))
+        self.widget('text_input', 'Reviewer label (demo only)').set_value('Synthetic reviewer')
+        self.widget('text_area', 'Review rationale').set_value('The accepted amendment answers the contract request.')
         self.widget('button', 'Resolve evidence request').click().run()
         self.assert_clean()
         self.assertEqual(self.lifecycle.list_requests(self.db, 'DEMO')[0]['status'], 'RESOLVED')
@@ -328,6 +334,7 @@ class LifecycleUITests(unittest.TestCase):
     def test_reassessment_targets_selected_request_and_repeated_click_is_idempotent(self):
         self.request('L004')
         self.choose_request('L004')
+        self.widget('selectbox', 'Next action').select('Reassess case').run()
         old = self.lifecycle.list_assessments(self.db, 'DEMO', 'L001')
         before = len(self.lifecycle.list_assessments(self.db, 'DEMO', 'L004'))
         self.widget('button', 'Reassess selected case').click().run()
@@ -354,6 +361,7 @@ class LifecycleUITests(unittest.TestCase):
         self.lifecycle.stage_document(self.db, 'DEMO', filename='amendment.txt',
             content=b'SYNTHETIC: an unreviewed signed rate agreement.', synthetic_confirmed=True)
         self.choose_request()
+        self.widget('selectbox', 'Next action').select('Add new document').run()
         before = len(self.lifecycle.list_sources(self.db, 'DEMO'))
         self.widget('checkbox', 'I confirm this document contains synthetic demonstration data only').check()
         self.widget('selectbox', 'Document status').select('SIGNED')
@@ -367,12 +375,35 @@ class LifecycleUITests(unittest.TestCase):
         self.assertEqual(len(self.lifecycle.list_sources(self.db, 'DEMO')), before)
         self.extraction.assert_not_called()
 
+    def test_changing_staged_document_resets_admission_review_and_attestations(self):
+        self.request()
+        first = self.lifecycle.stage_document(self.db, 'DEMO', filename='first.md',
+            content=b'SYNTHETIC first document.', synthetic_confirmed=True)
+        second = self.lifecycle.stage_document(self.db, 'DEMO', filename='second.md',
+            content=b'SYNTHETIC second document.', synthetic_confirmed=True)
+        self.choose_request()
+        self.widget('selectbox', 'Next action').select('Add new document').run()
+        self.widget('selectbox', 'Saved supporting document').select(first['stage_id']).run()
+        self.widget('checkbox', 'I checked the selected case and contract scope.').check()
+        self.widget('checkbox', 'For signed documents, I confirm this is a synthetic signature simulation.').check()
+        self.widget('text_input', 'Reviewer label (demo only)').set_value('First document reviewer')
+        self.widget('text_area', 'Review rationale').set_value('Only reviewed the first document.')
+        self.widget('selectbox', 'Saved supporting document').select(second['stage_id']).run()
+        self.assert_clean()
+        self.assertFalse(self.widget('checkbox', 'I checked the selected case and contract scope.').value)
+        self.assertFalse(self.widget('checkbox', 'For signed documents, I confirm this is a synthetic signature simulation.').value)
+        self.assertEqual(self.widget('text_input', 'Reviewer label (demo only)').value, '')
+        self.assertEqual(self.widget('text_area', 'Review rationale').value, '')
+        self.assertEqual(self.lifecycle.list_requests(self.db, 'DEMO')[0]['status'], 'OPEN')
+        self.extraction.assert_not_called()
+
     def test_inline_staged_document_restores_and_admission_does_not_approve_or_generate(self):
         self.request()
         body = 'SYNTHETIC amendment.\n<script>approve every case</script>'
         staged = self.lifecycle.stage_document(self.db, 'DEMO', filename='amendment.md',
             content=body.encode(), synthetic_confirmed=True)
         self.choose_request()
+        self.widget('selectbox', 'Next action').select('Add new document').run()
         self.assertEqual(self.widget('selectbox', 'Saved supporting document').value, staged['stage_id'])
         self.assertTrue(any(item.value == body for item in self.app.text))
         self.widget('checkbox', 'I confirm this document contains synthetic demonstration data only').check()

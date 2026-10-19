@@ -60,9 +60,9 @@ PAGE_USAGE = {
     'Evidence requests': (
         '**Prioritize outstanding requests:** filter by vendor or contract and select a '
         'pending request. Resolved requests are retained in history and leave this queue.',
-        '**Review the missing evidence:** inspect the request type and supporting documents '
-        'before recording the evidence disposition. Attaching a document alone does not '
-        'resolve the request.',
+        '**Choose one next action:** attach an existing document, add new supporting evidence, '
+        'review and resolve, or reassess. Only that action is shown. Attaching evidence '
+        'does not approve its terms or resolve the request.',
         '**Return to the case:** after evidence is resolved, reassess the invoice against '
         'the updated records and complete its separate decision in Invoice Review.',
     ),
@@ -139,10 +139,13 @@ def render_navigation(st):
     return selected
 
 
-def page_description(st, page):
+def page_description(st, page, *, compact=False):
     label = next(label for name, label, _ in NAVIGATION if name == page)
     st.header(label)
     st.caption(DESCRIPTIONS[page])
-    with st.container(key='page-usage-guide', border=True):
-        st.markdown('**How to use this page**')
+    guide = (st.expander('How to use this page') if compact
+             else st.container(key='page-usage-guide', border=True))
+    with guide:
+        if not compact:
+            st.markdown('**How to use this page**')
         st.markdown('\n'.join('- ' + item for item in PAGE_USAGE[page]))

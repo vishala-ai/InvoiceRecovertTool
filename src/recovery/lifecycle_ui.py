@@ -572,8 +572,9 @@ def _supporting_intake(st, db_path, tenant, line, request=None):
     """Keep guarded synthetic admission beside the case that needs its evidence."""
     from . import lifecycle
 
-    prefix = _key('supporting-evidence', str(Path(db_path).resolve()), tenant, line['line_id'])
-    with st.expander('Add supporting evidence'):
+    prefix = _key('supporting-evidence', str(Path(db_path).resolve()), tenant, line['line_id'],
+                  request['request_id'] if request else None)
+    with st.container(key=prefix + ':panel'):
         st.caption('Synthetic TXT or Markdown only. Adding a document does not approve its rates or clear a case.')
         upload = st.file_uploader('Synthetic supporting document', type=['txt', 'md'], key=prefix + ':upload')
         synthetic = st.checkbox('I confirm this document contains synthetic demonstration data only', key=prefix + ':synthetic')
@@ -591,14 +592,15 @@ def _supporting_intake(st, db_path, tenant, line, request=None):
             st.text(staged['body'])
         scope = {key: line[key] for key in ('supplier_id', 'contract_id', 'role', 'location')}
         st.caption(f"For {line['line_id']} · {line['contract_id']} · {line['role']} · {line['location']}")
-        with st.form(prefix + ':admit'):
+        admission_prefix = prefix + ':' + selected
+        with st.form(admission_prefix + ':admit'):
             title = st.text_input('Document title', value=staged['original_filename'])
             status = st.selectbox('Document status', ['DRAFT', 'SIGNED'],
                 format_func=lambda value: 'Unsigned draft' if value == 'DRAFT' else 'Simulated signed agreement')
             signed_date = st.text_input('Signed date (YYYY-MM-DD)')
             attest = st.checkbox('I checked the selected case and contract scope.')
             signed_attest = st.checkbox('For signed documents, I confirm this is a synthetic signature simulation.')
-            reviewer, note = _reviewer(st, prefix + ':admission')
+            reviewer, note = _reviewer(st, admission_prefix + ':admission')
             submit = st.form_submit_button('Add document to this case')
         if submit:
             if not synthetic or not attest or (status == 'SIGNED' and not signed_attest):
@@ -622,7 +624,7 @@ def render_requests(st, db_path, *, tenant='DEMO'):
     from . import lifecycle
     from .engine import audit, evaluate_line
 
-    page_description(st, 'Evidence requests')
+    page_description(st, 'Evidence requests', compact=True)
     st.caption('Only open requests and requests awaiting evidence review appear here. '
                'Resolved requests stay in local history; reassessment continues on Invoice review.')
     requests = [request for request in lifecycle.list_requests(db_path, tenant)
@@ -639,14 +641,15 @@ def render_requests(st, db_path, *, tenant='DEMO'):
         st.session_state[prefix + ':contract'] = target_line['contract_id']
         st.session_state[prefix + ':aligned'] = target
     suppliers = sorted({line['supplier_id'] for line in lines})
-    vendor = st.selectbox('Vendor', [''] + suppliers,
+    vendor_filter, contract_filter = st.columns(2)
+    vendor = vendor_filter.selectbox('Vendor', [''] + suppliers,
         format_func=lambda value: f'{names.get(value, value)} ({value})' if value else 'All vendors',
         key=prefix + ':vendor')
     contracts = sorted({line['contract_id'] for line in lines if not vendor or line['supplier_id'] == vendor})
     if st.session_state.get(prefix + ':contract') not in [''] + contracts:
         st.session_state[prefix + ':contract'] = ''
-    contract = st.selectbox('Contract', [''] + contracts, format_func=lambda value: value or 'All contracts',
-                           key=prefix + ':contract')
+    contract = contract_filter.selectbox('Contract', [''] + contracts,
+        format_func=lambda value: value or 'All contracts', key=prefix + ':contract')
     def in_scope(line):
         return (not vendor or line['supplier_id'] == vendor) and (not contract or line['contract_id'] == contract)
     filtered = [request for request in requests if request['line_id'] in by_line and in_scope(by_line[request['line_id']])]
@@ -682,15 +685,27 @@ def render_requests(st, db_path, *, tenant='DEMO'):
     request = filtered[selected]
     line = by_line[request['line_id']]
     st.subheader('Review evidence for ' + request['line_id'])
+    st.caption(f"{names.get(line['supplier_id'], line['supplier_id'])} · {line['contract_id']} · "
+               f"{REQUEST_STATUS.get(request['status'], request['status'])}")
     st.text(request['details'])
-    if request['request_type'] != 'CONTRACT_RATE':
+    contract_request = request['request_type'] == 'CONTRACT_RATE'
+    actions = ['Attach existing document', 'Add new document', 'Review and resolve', 'Reassess case']
+    if not contract_request:
         st.info('This evidence type is tracked, but its payment, credit, service or other correction is not supported in this demo. It remains open.')
-    else:
+        actions = ['Reassess case']
+    action = st.selectbox('Next action', actions,
+        index=2 if contract_request and request.get('attachments') else 0,
+        key=prefix + ':action:' + request['request_id'] + ':' + request['status'],
+        help='Show one action for this request. Attachment, term review, resolution and '
+             'invoice approval remain separate decisions.')
+    if action in ('Attach existing document', 'Review and resolve'):
         contract_documents = {doc['doc_id'] for doc in lifecycle.list_documents(db_path, tenant)
                               if doc['kind'] == 'RATE_AGREEMENT'}
         sources = [source for source in lifecycle.list_sources(db_path, tenant)
             if source['doc_id'] in contract_documents and all(source['scope'][key] == line[key]
                 for key in ('tenant_id', 'supplier_id', 'contract_id', 'role', 'location'))]
+    if action == 'Attach existing document':
+        st.caption('Link a document already saved for this contract. Its terms still require review.')
         with st.form(prefix + ':attach:' + request['request_id']):
             version = st.selectbox('Supporting contract document', [''] + [source['version_id'] for source in sources],
                 format_func=lambda value: next((source['doc_id'] for source in sources if source['version_id'] == value), 'Select a document'))
@@ -700,11 +715,28 @@ def render_requests(st, db_path, *, tenant='DEMO'):
             _action(st, db_path, 'Evidence attached; a reviewed resolution is still required.', lambda: lifecycle.attach_evidence(
                 db_path, tenant, request['request_id'], version, reviewer, note,
                 _key('attach', request['request_id'], version, reviewer, note)))
-        document_id = next((source['doc_id'] for source in sources if source['version_id'] == version), None)
-        st.button('Review contract terms', disabled=document_id is None, on_click=_navigate,
-            args=(st, 'Contract term review', db_path), kwargs={'doc_id': document_id}, key=prefix + ':terms')
+    elif action == 'Review and resolve':
+        attached_versions = {event['version_id'] for event in request.get('attachments', [])}
+        attached_sources = [source for source in sources if source['version_id'] in attached_versions]
+        if attached_sources:
+            version = st.selectbox('Attached contract document',
+                [source['version_id'] for source in attached_sources],
+                format_func=lambda value: next(source['doc_id'] for source in attached_sources
+                                                if source['version_id'] == value),
+                key=prefix + ':attached:' + request['request_id'])
+            attached_source = next(source for source in attached_sources
+                                   if source['version_id'] == version)
+            document_id = attached_source['doc_id']
+            with st.expander('Read attached document'):
+                _source(st, attached_source)
+            st.button('Review contract terms', on_click=_navigate,
+                args=(st, 'Contract term review', db_path), kwargs={'doc_id': document_id},
+                key=prefix + ':terms:' + request['request_id'])
+        else:
+            st.info('Attach supporting evidence before recording a resolution.')
         with st.form(prefix + ':resolve:' + request['request_id']):
-            st.caption('Closing the request is a separate reviewed decision from attaching a document.')
+            st.caption('Review all attached evidence and its terms before resolving. '
+                       'Resolution does not reassess or approve the invoice.')
             reviewer, note = _reviewer(st, prefix + ':resolution:' + request['request_id'])
             resolve = st.form_submit_button('Resolve evidence request', disabled=not request.get('attachments'))
         if resolve:
@@ -712,13 +744,16 @@ def render_requests(st, db_path, *, tenant='DEMO'):
                 lambda: lifecycle.resolve_request(db_path, tenant, request['request_id'], reviewer, note,
                     _key('resolve', request['request_id'], reviewer, note)),
                 after=lambda _result: _navigate(st, 'Invoice review', db_path, line_id=line['line_id']))
+    elif action == 'Add new document':
         _supporting_intake(st, db_path, tenant, line, request)
-    if st.button('Reassess selected case', key=prefix + ':reassess:' + request['request_id']):
-        with connect(db_path) as conn:
-            current = evaluate_line(conn, tenant, line['line_id'])
-        _action(st, db_path, 'Current evidence assessed; an open request remains blocking.', lambda: lifecycle.reassess(
-            db_path, tenant, line['line_id'], prior_review_event_id=request['review_event_id'],
-            idempotency_key=_key('request-reassess', request['request_id'], current['case_digest'])))
+    elif action == 'Reassess case':
+        st.caption('Recalculate this invoice using current evidence. Open requests remain blocking.')
+        if st.button('Reassess selected case', key=prefix + ':reassess:' + request['request_id']):
+            with connect(db_path) as conn:
+                current = evaluate_line(conn, tenant, line['line_id'])
+            _action(st, db_path, 'Current evidence assessed; an open request remains blocking.', lambda: lifecycle.reassess(
+                db_path, tenant, line['line_id'], prior_review_event_id=request['review_event_id'],
+                idempotency_key=_key('request-reassess', request['request_id'], current['case_digest'])))
     st.button('Open invoice review', on_click=_navigate, args=(st, 'Invoice review', db_path),
               kwargs={'line_id': line['line_id']}, key=prefix + ':open-invoice')
 

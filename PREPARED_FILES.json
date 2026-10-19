@@ -28,9 +28,9 @@
     },
     {
       "path": "README.md",
-      "sha256": "83f723463302813b36a7cdba248ba5fafa5390c05583ca7af7225096ed5ea5e4",
-      "source_sha256": "83f723463302813b36a7cdba248ba5fafa5390c05583ca7af7225096ed5ea5e4",
-      "bytes": 55977,
+      "sha256": "fedc6c86b863708ab81d697ec3a6a12b8c087d24ee3e0fa7d52bac6ca42d3706",
+      "source_sha256": "fedc6c86b863708ab81d697ec3a6a12b8c087d24ee3e0fa7d52bac6ca42d3706",
+      "bytes": 56305,
       "transformed": false
     },
     {
@@ -238,9 +238,9 @@
     },
     {
       "path": "docs/IMPLEMENTATION_GUIDE.md",
-      "sha256": "9c0efc72b4fc2b5c2163aa70c5f6710975f7897233f88c5b8628f9371d0a037c",
-      "source_sha256": "9c0efc72b4fc2b5c2163aa70c5f6710975f7897233f88c5b8628f9371d0a037c",
-      "bytes": 54700,
+      "sha256": "f2af379fb71d8011686ded16ddff5e1a66026a43e7d2c98f6a4c195cb7b867a3",
+      "source_sha256": "f2af379fb71d8011686ded16ddff5e1a66026a43e7d2c98f6a4c195cb7b867a3",
+      "bytes": 55250,
       "transformed": false
     },
     {
@@ -525,9 +525,9 @@
     },
     {
       "path": "src/recovery/lifecycle_ui.py",
-      "sha256": "7fb946c5b692063470dabad5307ad254455feb91495d99f73fa8a8365b1aa956",
-      "source_sha256": "7fb946c5b692063470dabad5307ad254455feb91495d99f73fa8a8365b1aa956",
-      "bytes": 47761,
+      "sha256": "3233e325ccb85ed7970995816069fa599b7efac4b957ba581029e10529eea33f",
+      "source_sha256": "3233e325ccb85ed7970995816069fa599b7efac4b957ba581029e10529eea33f",
+      "bytes": 50098,
       "transformed": false
     },
     {
@@ -658,9 +658,9 @@
     },
     {
       "path": "src/recovery/workspace_ui.py",
-      "sha256": "2df8bc7f647dabfe6c6fac5d4ab85b762d7e24e399b4bb2fad753380a7ea58c9",
-      "source_sha256": "2df8bc7f647dabfe6c6fac5d4ab85b762d7e24e399b4bb2fad753380a7ea58c9",
-      "bytes": 9092,
+      "sha256": "416a4317856f0213e2309269bb2bcabad0e93ce1e9b9c982397ad6fdacb9cd94",
+      "source_sha256": "416a4317856f0213e2309269bb2bcabad0e93ce1e9b9c982397ad6fdacb9cd94",
+      "bytes": 9256,
       "transformed": false
     },
     {
@@ -938,9 +938,9 @@
     },
     {
       "path": "tests/test_lifecycle_ui.py",
-      "sha256": "715565674d4ca1f8783b812392c7200c17cdef0f9626d13cbf64336e0c244b97",
-      "source_sha256": "715565674d4ca1f8783b812392c7200c17cdef0f9626d13cbf64336e0c244b97",
-      "bytes": 25778,
+      "sha256": "d952b899c3f1df058da8727b473860ff35b5a7cba635cbc6db555874fcedfbd7",
+      "source_sha256": "d952b899c3f1df058da8727b473860ff35b5a7cba635cbc6db555874fcedfbd7",
+      "bytes": 28242,
       "transformed": false
     },
     {
@@ -952,9 +952,9 @@
     },
     {
       "path": "tests/test_request_resolution_ui.py",
-      "sha256": "0e4cf7dac032475fc9b18c3f731d75c54275da1ebc2251358fade4eb280113e4",
-      "source_sha256": "0e4cf7dac032475fc9b18c3f731d75c54275da1ebc2251358fade4eb280113e4",
-      "bytes": 9338,
+      "sha256": "d3a925ca7d07fda7f45ec18762d41477199595e47cb40f7f3fde3705227ebaa2",
+      "source_sha256": "d3a925ca7d07fda7f45ec18762d41477199595e47cb40f7f3fde3705227ebaa2",
+      "bytes": 13024,
       "transformed": false
     },
     {
